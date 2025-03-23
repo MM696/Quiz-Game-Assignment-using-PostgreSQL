@@ -1,57 +1,56 @@
 import express from "express";
 import bodyParser from "body-parser";
 import pg from "pg";
+import dotenv from "dotenv";
 
-const db = new pg.Client({
-  user: "postgres",
-  host: "localhost",
-  database: "Mpire",
-  password: "Mac08117451648",
-  port: 5432,
-});
+dotenv.config(); // Load environment variables
 
 const app = express();
 const port = 3000;
 
-db.connect();
-
-let quiz = [];
-db.query("SELECT * FROM capitals", (err, res) => {
-  if (err) {
-    console.error("Error executing query", err.stack);
-  } else {
-    quiz = res.rows;
-  }
-  db.end();
+// PostgreSQL Connection Setup
+const pool = new pg.Pool({
+  connectionString: process.env.DATABASE_URL, 
+  ssl: process.env.DATABASE_URL.includes("localhost") ? false : { rejectUnauthorized: false },
 });
 
+// Function to Fetch Questions from Database
+async function fetchQuestions() {
+  try {
+    const result = await pool.query("SELECT * FROM capitals");
+    return result.rows;
+  } catch (err) {
+    console.error("Error fetching questions:", err);
+    return [];
+  }
+}
+
+let quiz = [];
 let totalCorrect = 0;
+let currentQuestion = {};
 
 // Middleware
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static("public"));
 
-let currentQuestion = {};
-
 // GET home page
 app.get("/", async (req, res) => {
   totalCorrect = 0;
+  quiz = await fetchQuestions();
   await nextQuestion();
-  console.log(currentQuestion);
+  
   res.render("index.ejs", { question: currentQuestion });
 });
 
-// POST a new post
-app.post("/submit", (req, res) => {
+// POST - Handle answer submission
+app.post("/submit", async (req, res) => {
   let answer = req.body.answer.trim();
-  let isCorrect = false;
-  if (currentQuestion.capital === answer) {
-    totalCorrect++;
-    console.log(totalCorrect);
-    isCorrect = true;
-  }
+  let isCorrect = currentQuestion.capital === answer;
 
-  nextQuestion();
+  if (isCorrect) totalCorrect++;
+
+  await nextQuestion();
+
   res.render("index.ejs", {
     question: currentQuestion,
     wasCorrect: isCorrect,
@@ -59,11 +58,16 @@ app.post("/submit", (req, res) => {
   });
 });
 
+// Function to get next question
 async function nextQuestion() {
-  const randomCountry = quiz[Math.floor(Math.random() * quiz.length)];
-  currentQuestion = randomCountry;
+  if (quiz.length > 0) {
+    currentQuestion = quiz[Math.floor(Math.random() * quiz.length)];
+  } else {
+    currentQuestion = { country: "No data", capital: "No data" };
+  }
 }
 
+// Start Server
 app.listen(port, () => {
   console.log(`Server is running at http://localhost:${port}`);
 });
