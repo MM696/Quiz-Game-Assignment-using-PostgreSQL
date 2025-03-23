@@ -10,9 +10,14 @@ const port = 3000;
 
 // PostgreSQL Connection Setup
 const pool = new pg.Pool({
-  connectionString: process.env.DATABASE_URL, 
-  ssl: process.env.DATABASE_URL.includes("localhost") ? false : { rejectUnauthorized: false },
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.DATABASE_URL.includes("localhost") ? false : { rejectUnauthorized: false }, // Enable SSL for Render
 });
+
+// Test database connection
+pool.connect()
+  .then(() => console.log("Connected to PostgreSQL"))
+  .catch((err) => console.error("Database connection error:", err));
 
 // Function to Fetch Questions from Database
 async function fetchQuestions() {
