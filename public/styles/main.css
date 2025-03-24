@@ -3,15 +3,16 @@ body {
   background-repeat: no-repeat;
   background-size: cover;
   font-family: Arial, sans-serif;
+  height: 95vh;
 }
 
 .container {
   display: flex;
   flex-direction: column;
   justify-content: space-evenly;
-  max-width: 40%;
-  height: 300px;
-  margin: 15% auto;
+  align-items: center;
+  height: 500px;
+  margin: 7% auto;
   padding: 20px;
   background-color: #fff;
   border-radius: 10px;
@@ -46,7 +47,7 @@ button {
   letter-spacing: 2px;
   font-size: large;
   display: block;
-  width: 100%;
+  width: 50vw;
   padding: 10px;
   background-color: #ffca00;
   color: white;
