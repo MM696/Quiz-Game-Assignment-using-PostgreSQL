@@ -1,32 +1,25 @@
 import express from "express";
 import bodyParser from "body-parser";
 import pg from "pg";
+import dotenv from "dotenv";
+
+dotenv.config(); // Load environment variables
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = 3000;
 
-// PostgreSQL Connection Setup 
-const databaseUrl = process.env.DATABASE_URL;
-
-if (!databaseUrl) {
-  console.error("DATABASE_URL is not set in environment variables.");
-  process.exit(1);
-}
-
+// PostgreSQL Connection Setup
 const pool = new pg.Pool({
-  connectionString: databaseUrl,
-  ssl: databaseUrl.includes("localhost") ? false : { rejectUnauthorized: false },
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.DATABASE_URL.includes("localhost") ? false : { rejectUnauthorized: false }, // Enable SSL for Render
 });
 
 // Test database connection
 pool.connect()
   .then(() => console.log("Connected to PostgreSQL"))
-  .catch((err) => {
-    console.error("Database connection error:", err);
-    process.exit(1);
-  });
+  .catch((err) => console.error("Database connection error:", err));
 
-//Fetch Questions
+// Function to Fetch Questions from Database
 async function fetchQuestions() {
   try {
     const result = await pool.query("SELECT * FROM capitals");
@@ -45,15 +38,16 @@ let currentQuestion = {};
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static("public"));
 
-//Routes
+// GET home page
 app.get("/", async (req, res) => {
   totalCorrect = 0;
   quiz = await fetchQuestions();
   await nextQuestion();
-
+  
   res.render("index.ejs", { question: currentQuestion });
 });
 
+// POST - Handle answer submission
 app.post("/submit", async (req, res) => {
   let answer = req.body.answer.trim();
   let isCorrect = currentQuestion.capital === answer;
@@ -69,7 +63,7 @@ app.post("/submit", async (req, res) => {
   });
 });
 
-//Next Question
+// Function to get next question
 async function nextQuestion() {
   if (quiz.length > 0) {
     currentQuestion = quiz[Math.floor(Math.random() * quiz.length)];
@@ -78,7 +72,7 @@ async function nextQuestion() {
   }
 }
 
-//Start Server
+// Start Server
 app.listen(port, () => {
   console.log(`Server is running at http://localhost:${port}`);
 });
