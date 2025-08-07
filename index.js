@@ -1,31 +1,32 @@
 import express from "express";
 import bodyParser from "body-parser";
-import pg from "pg";
 import dotenv from "dotenv";
+import { createClient } from "@supabase/supabase-js";
 
-dotenv.config(); // Load environment variables
+dotenv.config(); // Load .env file
 
 const app = express();
 const port = 3000;
 
-// PostgreSQL Connection Setup
-const pool = new pg.Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL.includes("localhost") ? false : { rejectUnauthorized: false }, // Enable SSL for Render
-});
+// Supabase Client Setup
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_ANON_KEY
+);
 
-// Test database connection
-pool.connect()
-  .then(() => console.log("Connected to PostgreSQL"))
-  .catch((err) => console.error("Database connection error:", err));
-
-// Function to Fetch Questions from Database
+// Function to Fetch Questions from Supabase
 async function fetchQuestions() {
   try {
-    const result = await pool.query("SELECT * FROM capitals");
-    return result.rows;
+    const { data, error } = await supabase.from("capitals").select("*");
+
+    if (error) {
+      console.error("Error fetching questions:", error.message);
+      return [];
+    }
+
+    return data;
   } catch (err) {
-    console.error("Error fetching questions:", err);
+    console.error("Unexpected error:", err);
     return [];
   }
 }
@@ -38,12 +39,15 @@ let currentQuestion = {};
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static("public"));
 
+// Set View Engine
+app.set("view engine", "ejs");
+
 // GET home page
 app.get("/", async (req, res) => {
   totalCorrect = 0;
   quiz = await fetchQuestions();
   await nextQuestion();
-  
+
   res.render("index.ejs", { question: currentQuestion });
 });
 
